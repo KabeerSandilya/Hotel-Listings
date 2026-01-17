@@ -21,8 +21,6 @@ const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
-const { Session } = require("inspector/promises");
-
 const dbUrl = process.env.ATLASDB_URL;
 
 app.set("view engine", "ejs");
@@ -52,7 +50,7 @@ const store = MongoStore.create({
   touchAfter: 24 * 3600,
 });
 
-store.on("error", () => {
+store.on("error", (err) => {
   console.log("ERROR in MONGO SESSION STORE", err);
 });
 
@@ -109,6 +107,12 @@ app.all("*", (req, res, next) => {
 
 app.use((err, req, res, next) => {
   let { statusCode = 500, message = "Something went wrong" } = err;
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.locals.success = res.locals.success || [];
+  res.locals.error = res.locals.error || [];
+  res.locals.currUser = res.locals.currUser || null;
   res.status(statusCode).render("error.ejs", { message });
   // res.status(statusCode).send(message);
 });
