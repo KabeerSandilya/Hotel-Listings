@@ -1,5 +1,5 @@
-if(process.env.NODE_ENV != "production"){
-    require("dotenv").config();
+if (process.env.NODE_ENV != "production") {
+  require("dotenv").config();
 }
 
 const express = require("express");
@@ -21,62 +21,56 @@ const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
-
 const { Session } = require("inspector/promises");
 
 const dbUrl = process.env.ATLASDB_URL;
 
-
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname,"/views"));
-app.use(express.urlencoded({extended: true}));
+app.set("views", path.join(__dirname, "/views"));
+app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
-app.engine("ejs",ejsMate);
-app.use(express.static(path.join(__dirname,"/public")));
+app.engine("ejs", ejsMate);
+app.use(express.static(path.join(__dirname, "/public")));
 
 main()
-.then( () => {
+  .then(() => {
     console.log("Connected to DB");
-})
-.catch(err => {
+  })
+  .catch((err) => {
     console.log(err);
-})
+  });
 
 async function main() {
-    await mongoose.connect(dbUrl);
+  await mongoose.connect(dbUrl);
 }
 
-
 const store = MongoStore.create({
-    mongoUrl: dbUrl,
-    crypto: {
-        secret: process.env.SECRET
-    },
-    touchAfter: 24 * 3600,
+  mongoUrl: dbUrl,
+  crypto: {
+    secret: process.env.SECRET,
+  },
+  touchAfter: 24 * 3600,
 });
 
 store.on("error", () => {
-    console.log("ERROR in MONGO SESSION STORE",err);
-})
+  console.log("ERROR in MONGO SESSION STORE", err);
+});
 
 const sessionOptions = {
-    store,
-    secret: process.env.SECRET,
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, //one week in ms
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        httpOnly: true,
-    }
+  store,
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, //one week in ms
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  },
 };
 
 // app.get("/", (req,res) => {
 //     res.send("Hi i am root");
 // })
-
-
-
 
 app.use(session(sessionOptions));
 app.use(flash());
@@ -85,40 +79,40 @@ app.use(passport.initialize()); //initialises passport for every request
 app.use(passport.session()); //for every request to know which session they are part of
 passport.use(new LocalStrategy(User.authenticate())); //to authenticate all the users using local stratergy
 
-passport.serializeUser(User.serializeUser());//to store user info in the session
-passport.deserializeUser(User.deserializeUser());//to remove user info from the session
+passport.serializeUser(User.serializeUser()); //to store user info in the session
+passport.deserializeUser(User.deserializeUser()); //to remove user info from the session
 
-app.use((req,res,next)=>{
-    res.locals.success = req.flash("success");
-    res.locals.error = req.flash("error");
-    res.locals.currUser = req.user; //stores the information of the current user
-    next();
-})
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success") || [];
+  res.locals.error = req.flash("error") || [];
+  res.locals.currUser = req.user || null; //stores the information of the current user
+  next();
+});
 
-app.get("/demouser", async (req,res) =>{
-    let fakeUser = new User({
-        email:"student@gmail.com",
-        username:"Delta Studnet",
-    })
+app.get("/demouser", async (req, res) => {
+  let fakeUser = new User({
+    email: "student@gmail.com",
+    username: "Delta Studnet",
+  });
 
-    let registeredUser = await User.register(fakeUser,"helloworld")// to register a user with password helloworld, it automatically checks if the user is unique or not
-    res.send(registeredUser);
-})
+  let registeredUser = await User.register(fakeUser, "helloworld"); // to register a user with password helloworld, it automatically checks if the user is unique or not
+  res.send(registeredUser);
+});
 
 app.use("/listings", listingRouter);
 app.use("/listings/:id/reviews", reviewRouter);
 app.use("/", userRouter);
 
-app.all("*", (req,res,next) => {
-    next(new ExpressError(404,"Page Not Found"));
-})
+app.all("*", (req, res, next) => {
+  next(new ExpressError(404, "Page Not Found"));
+});
 
 app.use((err, req, res, next) => {
-    let {statusCode=500, message="Something went wrong"} = err;
-    res.status(statusCode).render("error.ejs", {message});
-    // res.status(statusCode).send(message);
-})
+  let { statusCode = 500, message = "Something went wrong" } = err;
+  res.status(statusCode).render("error.ejs", { message });
+  // res.status(statusCode).send(message);
+});
 
 app.listen(4040, () => {
-    console.log("Server is listening to port 4040");
-})
+  console.log("Server is listening to port 4040");
+});
